@@ -18,6 +18,7 @@ import {
   fmtQuoteTime,
   freshnessLetter,
   fundClass,
+  heatClass,
   pctChange,
 } from './format.js';
 
@@ -56,7 +57,7 @@ function writePref(key, val) {
   } catch {}
 }
 
-function Sparkline({ points, live, width = 82, height = 18, area = false }) {
+function Sparkline({ points, live, change = null, width = 82, height = 18, area = false }) {
   const series = useMemo(() => {
     const arr = points.slice();
     if (live != null && Number.isFinite(live)) arr.push(live);
@@ -79,18 +80,23 @@ function Sparkline({ points, live, width = 82, height = 18, area = false }) {
     ((1 - (v - min) / span) * (height - 4) + 2).toFixed(1),
   ]);
   const poly = coords.map((c) => c.join(',')).join(' ');
-  const up = series[series.length - 1] >= series[0];
+  const dir =
+    change != null && Number.isFinite(change)
+      ? dirClass(change)
+      : series[series.length - 1] >= series[0]
+      ? 'up'
+      : 'down';
 
   return (
-    <svg className={up ? 'spark up' : 'spark down'} width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+    <svg className={`spark ${dir}`} width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
       {area ? (
-        <polygon points={`2,${height - 1} ${poly} ${width - 2},${height - 1}`} fill="currentColor" fillOpacity="0.14" />
+        <polygon points={`2,${height - 1} ${poly} ${width - 2},${height - 1}`} fill="currentColor" fillOpacity="0.16" />
       ) : null}
       <polyline
         points={poly}
         fill="none"
         stroke="currentColor"
-        strokeWidth={area ? '1.8' : '1.35'}
+        strokeWidth={area ? '1.65' : '1.35'}
         strokeLinejoin="round"
         strokeLinecap="round"
       />
@@ -254,6 +260,7 @@ function TableRow({ spec, st, now, wideMode, expanded, onToggleExpand }) {
   const m = computeRowMetrics(spec, st, now);
   const isPerp = spec.kind === 'perp';
   const dir = dirClass(m.chg1d);
+  const pctHeat = heatClass(m.chg1d);
   const spanMin = st.snapSpanMin || 0;
 
   return (
@@ -285,11 +292,11 @@ function TableRow({ spec, st, now, wideMode, expanded, onToggleExpand }) {
         <td className="name" title={m.tooltip}>
           {spec.name}
         </td>
-        <td className="sparkcell">
-          <Sparkline points={m.sparks} live={m.mark} />
+        <td className={`sparkcell ${pctHeat}`}>
+          <Sparkline points={m.sparks} live={m.mark} change={m.chg1d} area />
         </td>
         <td className={`num px ${m.flash ? `flash-${m.flash}` : ''}`}>{fmtPx(m.mark)}</td>
-        <td className={`num ${dirClass(m.net1d)}`}>{fmtNet(m.net1d)}</td>
+        <td className={`num net-heat ${pctHeat}`}>{fmtNet(m.net1d)}</td>
         <td className={`num ${dirClass(m.chg1d)}`}>{fmtPct(m.chg1d, 2)}</td>
         <td className={`num ${dirClass(m.chg2d)}`}>{!m.has2d ? '…' : fmtPct(m.chg2d, 2)}</td>
 
@@ -458,7 +465,7 @@ function BentoView({ visible, st, now }) {
                     </div>
                     <div className="bento-mid">
                       <div className="bento-px">{fmtPx(m.mark)}</div>
-                      <Sparkline points={m.sparks} live={m.mark} width={78} height={24} area />
+                      <Sparkline points={m.sparks} live={m.mark} change={m.chg1d} width={78} height={24} area />
                     </div>
                     <div className="bento-meta">
                       <div>
@@ -553,7 +560,7 @@ function CockpitView({ visible, st, now, selectedId, onSelect }) {
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
             24 Saatlik 15m Trend · 2D Değişim: <strong className={`num ${dirClass(m.chg2d)}`}>{fmtPct(m.chg2d, 2)}</strong>
           </div>
-          <Sparkline points={m.sparks} live={m.mark} width={640} height={96} area />
+          <Sparkline points={m.sparks} live={m.mark} change={m.chg1d} width={640} height={96} area />
         </div>
 
         <div className="cockpit-stats">

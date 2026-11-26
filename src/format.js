@@ -101,6 +101,21 @@ export function dirClass(val) {
   return val > 0 ? 'up' : 'down';
 }
 
+export function heatLevel(pct) {
+  if (pct == null || !Number.isFinite(pct) || pct === 0) return 0;
+  const a = Math.abs(pct) * 100;
+  if (a >= 5) return 4;
+  if (a >= 2.5) return 3;
+  if (a >= 1) return 2;
+  return 1;
+}
+
+export function heatClass(pct) {
+  const dir = dirClass(pct);
+  const lvl = heatLevel(pct);
+  return lvl ? `${dir} heat-${lvl}` : 'flat';
+}
+
 export function fundClass(apr) {
   if (apr == null || !Number.isFinite(apr)) return 'fund none';
   if (apr > 0.15) return 'fund hot';
